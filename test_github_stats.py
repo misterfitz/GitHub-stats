@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from github_stats import Stats
+from github_stats import Queries, Stats
 
 
 def _repo(
@@ -168,3 +168,25 @@ async def test_exclude_langs_case_insensitive():
     languages = await s.languages
     assert "HTML" not in languages
     assert "TypeScript" in languages
+
+
+class _GraphQLResponse:
+    async def json(self) -> Dict[str, Any]:
+        return {"data": {"viewer": {"login": "testuser"}}}
+
+
+class _GraphQLSession:
+    def __init__(self):
+        self.last_headers: Optional[Dict[str, str]] = None
+
+    async def post(self, url: str, headers: Dict[str, str], json: Dict[str, str]):
+        self.last_headers = headers
+        return _GraphQLResponse()
+
+
+@pytest.mark.asyncio
+async def test_graphql_query_uses_bearer_token_header():
+    session = _GraphQLSession()
+    q = Queries("testuser", "secret-token", session)
+    await q.query("{ viewer { login } }")
+    assert session.last_headers == {"Authorization": "bearer secret-token"}
