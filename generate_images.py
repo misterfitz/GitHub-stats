@@ -129,6 +129,9 @@ async def main() -> None:
             exclude_langs=excluded_langs,
             ignore_forked_repos=ignore_forked_repos,
         )
+        # Prefetch repo/star/language stats so concurrent image generators do
+        # not race on a half-initialized Stats object.
+        await s.get_stats()
         await asyncio.gather(generate_languages(s), generate_overview(s))
 
 
